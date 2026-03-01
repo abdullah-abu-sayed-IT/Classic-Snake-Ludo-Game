@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐍 Snake & Ladder!</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --p1: #ff6b6b;
+  --p2: #4d96ff;
+  --p3: #6bcb77;
+  --p4: #ffd93d;
+}
+
+body {
+  background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+  min-height: 100vh;
+  font-family: 'Nunito', sans-serif;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+}
+
+h1 {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 900;
+  text-align: center;
+  margin: 10px 0;
+  text-shadow: 0 0 20px rgba(255,200,0,0.5);
+  background: linear-gradient(90deg, #ffd93d, #ff6b6b, #4d96ff, #6bcb77);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+#main {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  max-width: 900px;
+}
+
+/* BOARD */
+#board-wrap {
+  position: relative;
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  border: 4px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+.cell {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.1);
+  cursor: default;
+}
+
+.cell .num {
+  font-size: 0.6rem;
+  opacity: 0.7;
+  position: absolute;
+  top: 2px;
+  left: 3px;
+}
+
+.cell-light { background: #f8f0e3; color: #333; }
+.cell-dark  { background: #e8d5b0; color: #333; }
+.cell-snake { background: linear-gradient(135deg, #ff4757, #ff6b81) !important; }
+.cell-ladder { background: linear-gradient(135deg, #2ed573, #7bed9f) !important; }
+.cell-start { background: linear-gradient(135deg, #ffd93d, #ffeb7a) !important; }
+.cell-end   { background: linear-gradient(135deg, #a29bfe, #6c5ce7) !important; color: white !important; }
+
+.pieces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  justify-content: center;
+  align-items: center;
+}
+
+.piece {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s;
+  animation: pieceBounce 0.4s ease;
+}
+
+@keyframes pieceBounce {
+  0% { transform: scale(1.8); }
+  100% { transform: scale(1); }
+}
+
+/* SVG overlay for snakes and ladders */
+#overlay-svg {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+  border-radius: 12px;
+}
+
+/* SIDE PANEL */
+#panel {
+  background: rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 15px;
+  min-width: 200px;
+  max-width: 250px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+#panel h2 {
+  font-size: 1.1rem;
+  text-align: center;
+  margin-bottom: 12px;
+  color: #ffd93d;
+}
+
+.player-card {
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 2px solid transparent;
+  transition: all 0.3s;
+}
+
+.player-card.active {
+  border-color: #ffd93d;
+  background: rgba(255,215,0,0.1);
+  box-shadow: 0 0 15px rgba(255,215,0,0.2);
+}
+
+.player-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.player-info { flex: 1; }
+.player-name { font-size: 0.85rem; font-weight: 800; }
+.player-pos  { font-size: 0.75rem; opacity: 0.7; }
+
+/* DICE */
+#dice-area {
+  text-align: center;
+  margin: 15px 0;
+}
+
+#dice {
+  width: 70px;
+  height: 70px;
+  background: white;
+  border-radius: 14px;
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  box-shadow: 0 6px 0 #ccc, 0 8px 15px rgba(0,0,0,0.3);
+  cursor: pointer;
+  transition: all 0.1s;
+  user-select: none;
+  color: #333;
+}
+
+#dice:hover { transform: translateY(2px); box-shadow: 0 4px 0 #ccc; }
+#dice:active { transform: translateY(5px); box-shadow: 0 1px 0 #ccc; }
+#dice.rolling { animation: rollDice 0.5s ease; }
+
+@keyframes rollDice {
+  0%,100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-15deg) scale(1.1); }
+  75% { transform: rotate(15deg) scale(1.1); }
+}
+
+#roll-btn {
+  background: linear-gradient(135deg, #ffd93d, #ff6b6b);
+  border: none;
+  border-radius: 30px;
+  color: white;
+  font-family: 'Nunito', sans-serif;
+  font-size: 1rem;
+  font-weight: 900;
+  padding: 8px 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+  transition: all 0.1s;
+  width: 100%;
+}
+#roll-btn:hover { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.3); }
+#roll-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* LOG */
+#log {
+  margin-top: 12px;
+  max-height: 120px;
+  overflow-y: auto;
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+#log div { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+/* Legend */
+#legend {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.leg { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; }
+.leg-box { width: 14px; height: 14px; border-radius: 4px; }
+
+/* OVERLAY */
+#win-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 100;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+}
+#win-overlay.show { display: flex; }
+#win-overlay h2 { font-size: 3rem; animation: pop 0.5s ease; }
+@keyframes pop { 0% { transform: scale(0); } 80% { transform: scale(1.2); } 100% { transform: scale(1); } }
+#win-overlay p { font-size: 1.2rem; color: #ffd93d; }
+
+#new-game-btn {
+  background: linear-gradient(135deg, #6bcb77, #4d96ff);
+  border: none;
+  border-radius: 30px;
+  color: white;
+  font-family: 'Nunito', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+  padding: 12px 35px;
+  cursor: pointer;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.3);
+  margin-top: 10px;
+}
+
+/* Players setup */
+#setup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 30px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 20px;
+  margin: 20px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+#setup h2 { font-size: 1.5rem; color: #ffd93d; }
+#setup p { color: rgba(255,255,255,0.7); font-size: 0.9rem; }
+.setup-btn {
+  background: linear-gradient(135deg, #4d96ff, #6bcb77);
+  border: none; border-radius: 30px;
+  color: white; font-family: 'Nunito', sans-serif;
+  font-size: 1.1rem; font-weight: 900;
+  padding: 12px 30px; cursor: pointer;
+  box-shadow: 0 5px 0 rgba(0,0,0,0.3);
+  transition: all 0.1s; margin: 5px;
+}
+.setup-btn:hover { transform: translateY(2px); box-shadow: 0 3px 0 rgba(0,0,0,0.3); }
+
+#game-area { display: none; flex-direction: column; align-items: center; width: 100%; }
+</style>
+</head>
+<body>
+
+<h1>🐍 Snake & Ladder 🪜</h1>
+
+<!-- Setup Screen -->
+<div id="setup">
+  <h2>🎮 কতজন খেলবে?</h2>
+  <p>Choose number of players</p>
+  <div>
+    <button class="setup-btn" onclick="startGame(2)">👥 2 Players</button>
+    <button class="setup-btn" onclick="startGame(3)">👥 3 Players</button>
+    <button class="setup-btn" onclick="startGame(4)">👥 4 Players</button>
+  </div>
+</div>
+
+<!-- Game Area -->
+<div id="game-area">
+  <div id="legend">
+    <div class="leg"><div class="leg-box" style="background:#ff4757"></div> Snake 🐍</div>
+    <div class="leg"><div class="leg-box" style="background:#2ed573"></div> Ladder 🪜</div>
+    <div class="leg"><div class="leg-box" style="background:#ffd93d"></div> Start ⭐</div>
+    <div class="leg"><div class="leg-box" style="background:#a29bfe"></div> WIN! 🏆</div>
+  </div>
+
+  <div id="main">
+    <div id="board-wrap">
+      <div id="board"></div>
+      <svg id="overlay-svg"></svg>
+    </div>
+
+    <div id="panel">
+      <h2>🎲 Players</h2>
+      <div id="players-list"></div>
+
+      <div id="dice-area">
+        <div id="dice">🎲</div>
+        <button id="roll-btn" onclick="rollDice()">🎲 Roll Dice!</button>
+      </div>
+
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Win Overlay -->
+<div id="win-overlay">
+  <div style="font-size:5rem">🏆</div>
+  <h2 id="win-text"></h2>
+  <p id="win-sub"></p>
+  <button id="new-game-btn" onclick="resetGame()">🔄 Play Again!</button>
+</div>
+
+<script>
+const DICE_FACES = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+const PLAYER_EMOJIS = ['🧑','👧','🧒','👦'];
+const PLAYER_COLORS = ['#ff6b6b','#4d96ff','#6bcb77','#ffd93d'];
+const PLAYER_NAMES = ['Player 1','Player 2','Player 3','Player 4'];
+
+// Snakes: head -> tail
+const SNAKES = {
+  99:78, 95:75, 92:69, 87:36, 64:32, 62:19, 54:34, 48:16, 43:18, 40:3};
+
+// Ladders: bottom -> top
+const LADDERS = {
+  4:56, 8:26, 20:38, 28:76, 37:66, 51:67, 63:81, 71:91, 80:98};
+
+let players = [], currentPlayer = 0, gameActive = false, rolling = false;
+
+function startGame(n) {
+  players = [];
+  for (let i = 0; i < n; i++) {
+    players.push({ name: PLAYER_NAMES[i], pos: 0, emoji: PLAYER_EMOJIS[i], color: PLAYER_COLORS[i] });
+  }
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('game-area').style.display = 'flex';
+  currentPlayer = 0;
+  gameActive = true;
+  buildBoard();
+  renderPlayers();
+  renderPieces();
+  addLog(`🎮 Game started with ${n} players!`);
+}
+
+function buildBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  // Board goes 1-100, displayed in snake pattern
+  for (let row = 9; row >= 0; row--) {
+    let cols = [];
+    for (let col = 0; col < 10; col++) {
+      let num = row * 10 + col + 1;
+      // Even rows go right to left
+      if ((9 - row) % 2 === 1) num = row * 10 + (9 - col) + 1;
+      cols.push(num);
+    }
+    cols.forEach(num => {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = `cell-${num}`;
+      let cls = (Math.floor((num-1)/10) + (num-1)) % 2 === 0 ? 'cell-light' : 'cell-dark';
+      if (SNAKES[num]) cls = 'cell-snake';
+      if (LADDERS[num]) cls = 'cell-ladder';
+      if (num === 1) cls = 'cell-start';
+      if (num === 100) cls = 'cell-end';
+      cell.classList.add(cls);
+      cell.innerHTML = `<span class="num">${num}</span><div class="pieces" id="pieces-${num}"></div>`;
+      board.appendChild(cell);
+    });
+  }
+
+  // Draw SVG snakes and ladders
+  setTimeout(drawSVG, 100);
+}
+
+function getCellCenter(num) {
+  const cell = document.getElementById(`cell-${num}`);
+  if (!cell) return {x:0,y:0};
+  const bw = document.getElementById('board-wrap').getBoundingClientRect();
+  const cr = cell.getBoundingClientRect();
+  return { x: cr.left - bw.left + cr.width/2, y: cr.top - bw.top + cr.height/2 };
+}
+
+function drawSVG() {
+  const bw = document.getElementById('board-wrap');
+  const svg = document.getElementById('overlay-svg');
+  svg.setAttribute('width', bw.offsetWidth);
+  svg.setAttribute('height', bw.offsetHeight);
+  svg.innerHTML = '';
+
+  // Draw snakes
+  Object.entries(SNAKES).forEach(([head, tail]) => {
+    const h = getCellCenter(+head), t = getCellCenter(+tail);
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const cx = (h.x + t.x)/2 + 30, cy = (h.y + t.y)/2;
+    path.setAttribute('d', `M${h.x},${h.y} Q${cx},${cy} ${t.x},${t.y}`);
+    path.setAttribute('stroke', '#ff4757');
+    path.setAttribute('stroke-width', '4');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-dasharray', '8,4');
+    path.setAttribute('opacity', '0.8');
+    svg.appendChild(path);
+    // Snake head emoji
+    const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x', h.x); txt.setAttribute('y', h.y+6);
+    txt.setAttribute('text-anchor','middle'); txt.setAttribute('font-size','16');
+    txt.textContent = '🐍';
+    svg.appendChild(txt);
+  });
+
+  // Draw ladders
+  Object.entries(LADDERS).forEach(([bottom, top]) => {
+    const b = getCellCenter(+bottom), t = getCellCenter(+top);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', b.x); line.setAttribute('y1', b.y);
+    line.setAttribute('x2', t.x); line.setAttribute('y2', t.y);
+    line.setAttribute('stroke', '#2ed573');
+    line.setAttribute('stroke-width', '5');
+    line.setAttribute('opacity', '0.85');
+    svg.appendChild(line);
+    const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x', b.x); txt.setAttribute('y', b.y+6);
+    txt.setAttribute('text-anchor','middle'); txt.setAttribute('font-size','16');
+    txt.textContent = '🪜';
+    svg.appendChild(txt);
+  });
+}
+
+function renderPlayers() {
+  const list = document.getElementById('players-list');
+  list.innerHTML = '';
+  players.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'player-card' + (i === currentPlayer && gameActive ? ' active' : '');
+    card.innerHTML = `
+      <div class="player-dot" style="background:${p.color}">${p.emoji}</div>
+      <div class="player-info">
+        <div class="player-name">${p.name}</div>
+        <div class="player-pos">📍 Square ${p.pos === 0 ? 'Start' : p.pos}</div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function renderPieces() {
+  // Clear all
+  document.querySelectorAll('.pieces').forEach(el => el.innerHTML = '');
+  players.forEach((p, i) => {
+    const id = p.pos === 0 ? 'pieces-1' : `pieces-${p.pos}`;
+    // pos 0 means not on board yet, show at cell 1 area outside
+    const container = document.getElementById(p.pos === 0 ? 'pieces-1' : `pieces-${p.pos}`);
+    if (container) {
+      const piece = document.createElement('div');
+      piece.className = 'piece';
+      piece.style.background = p.color;
+      piece.textContent = p.emoji;
+      piece.style.fontSize = '9px';
+      container.appendChild(piece);
+    }
+  });
+}
+
+function rollDice() {
+  if (!gameActive || rolling) return;
+  rolling = true;
+  document.getElementById('roll-btn').disabled = true;
+
+  const dice = document.getElementById('dice');
+  dice.classList.add('rolling');
+
+  let count = 0;
+  const interval = setInterval(() => {
+    const face = Math.floor(Math.random()*6);
+    dice.textContent = DICE_FACES[face];
+    count++;
+    if (count >= 10) {
+      clearInterval(interval);
+      dice.classList.remove('rolling');
+      const rolled = Math.floor(Math.random()*6) + 1;
+      dice.textContent = DICE_FACES[rolled-1];
+      movePlayer(rolled);
+    }
+  }, 60);
+}
+
+function movePlayer(rolled) {
+  const p = players[currentPlayer];
+  const startPos = p.pos === 0 ? 0 : p.pos;
+  let newPos = startPos + rolled;
+
+  addLog(`${p.emoji} ${p.name} rolled <b>${rolled}</b> — moved to ${Math.min(newPos,100)}`);
+
+  if (newPos > 100) {
+    addLog(`${p.emoji} Needs exact number to win! Stay at ${p.pos}`);
+    endTurn();
+    return;
+  }
+
+  p.pos = newPos;
+
+  setTimeout(() => {
+    renderPieces();
+    renderPlayers();
+
+    if (p.pos === 100) {
+      showWin(p);
+      return;
+    }
+
+    // Check snake
+    if (SNAKES[p.pos]) {
+      setTimeout(() => {
+        addLog(`🐍 Oh no! ${p.emoji} ${p.name} hit a snake! ${p.pos} → ${SNAKES[p.pos]}`);
+        p.pos = SNAKES[p.pos];
+        renderPieces(); renderPlayers();
+        endTurn();
+      }, 500);
+    }
+    // Check ladder
+    else if (LADDERS[p.pos]) {
+      setTimeout(() => {
+        addLog(`🪜 Woohoo! ${p.emoji} ${p.name} climbed a ladder! ${p.pos} → ${LADDERS[p.pos]}`);
+        p.pos = LADDERS[p.pos];
+        renderPieces(); renderPlayers();
+        endTurn();
+      }, 500);
+    } else {
+      endTurn();
+    }
+  }, 400);
+}
+
+function endTurn() {
+  currentPlayer = (currentPlayer + 1) % players.length;
+  rolling = false;
+  document.getElementById('roll-btn').disabled = false;
+  renderPlayers();
+  addLog(`🎯 Now it's ${players[currentPlayer].emoji} ${players[currentPlayer].name}'s turn!`);
+}
+
+function showWin(p) {
+  gameActive = false;
+  document.getElementById('win-text').textContent = `${p.emoji} ${p.name} Wins!`;
+  document.getElementById('win-sub').textContent = '🎉 Congratulations! Amazing! 🎉';
+  document.getElementById('win-overlay').classList.add('show');
+}
+
+function resetGame() {
+  document.getElementById('win-overlay').classList.remove('show');
+  document.getElementById('game-area').style.display = 'none';
+  document.getElementById('setup').style.display = 'flex';
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('dice').textContent = '🎲';
+}
+
+function addLog(msg) {
+  const log = document.getElementById('log');
+  const div = document.createElement('div');
+  div.innerHTML = msg;
+  log.prepend(div);
+}
+</script>
+</body>
+</html>
